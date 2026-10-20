@@ -19,7 +19,7 @@ every runtime dependency is the primary security boundary.
 | Permission | Type | Required operations | Why a narrower permission is insufficient |
 | --- | --- | --- | --- |
 | `MailboxItem.Read.User` | Office add-in resource-specific consent | Read the currently selected item's subject and identifier through Office.js | This permission is selected-item access only. It does not authorize Graph folder, message-move, or rule operations. |
-| `Mail.ReadWrite` | Delegated Microsoft Graph | Discover and create the OLHelper folder tree; scan only IDs and subjects from up to 250 recent Inbox messages; move matching messages and case folders | Graph folder creation and message/folder moves require `Mail.ReadWrite`. Graph has no delegated scope limited to a Tracking ID, selected message, or OLHelper folder tree. |
+| `Mail.ReadWrite` | Delegated Microsoft Graph | Discover and create the OLHelper folder tree; scan only IDs and subjects from up to 250 recent Inbox messages; move matching messages and case folders, including moving a case folder to Deleted Items | Graph folder creation and message/folder moves require `Mail.ReadWrite`. Graph has no delegated scope limited to a Tracking ID, selected message, or OLHelper folder tree. |
 | `MailboxSettings.ReadWrite` | Delegated Microsoft Graph | List, inspect, create, enable, disable, retarget, and delete native Inbox rules | Graph exposes no narrower delegated rule-management permission. |
 
 The Graph scopes are powerful. Client validation and endpoint restrictions
@@ -94,7 +94,7 @@ user-agent information; they must not contain mailbox data.
 - A token is attached only by the central Graph client and only to an allowed
   `https://graph.microsoft.com/v1.0` request.
 - Read-only status checks keep the task-pane session active so the user can
-  proceed directly to Track, Archive, Reopen, or Repair. After a completed
+  proceed directly to Track, Archive, Delete, Reopen, or Repair. After a completed
   mailbox mutation, including a failed mutation, OLHelper disables further
   mailbox actions, displays an accessible ten-second visual countdown, and
   navigates to a minimal session-ended document. An explicit **End secure
@@ -144,7 +144,7 @@ user-agent information; they must not contain mailbox data.
 
 ### User intent and stale-context protection
 
-- Track, Archive, Reopen, and Repair require an in-pane confirmation describing
+- Track, Archive, Delete, Reopen, and Repair require an in-pane confirmation describing
   the intended mailbox changes.
 - The confirmation is bound to a snapshot of the Outlook item ID, converted
   Graph ID, and subject.

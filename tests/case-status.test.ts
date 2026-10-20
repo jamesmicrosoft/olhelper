@@ -59,13 +59,13 @@ test("offers mutations only after status establishes the case state", () => {
       location: "active",
       routing: "enabled",
     }),
-    ["archive"],
+    ["archive", "delete"],
   );
   assert.deepEqual(
     getAvailableCaseActions({
       location: "active",
       routing: "mistargeted",
     }),
-    ["archive", "repair"],
+    ["archive", "delete", "repair"],
   );
 });

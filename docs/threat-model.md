@@ -158,7 +158,7 @@ than supplied only through email, Word, or this repository document.
 | --- | --- | --- | --- |
 | List/create root folders | `GET/POST /me/mailFolders` | Folder IDs, names, child counts; new display name | `Mail.ReadWrite` |
 | List/create child folders | `GET/POST /me/mailFolders/{id}/childFolders` | Folder IDs/names; new display name | `Mail.ReadWrite` |
-| Move case folder | `POST /me/mailFolders/{id}/move` | Destination folder ID | `Mail.ReadWrite` |
+| Move case folder | `POST /me/mailFolders/{id}/move` | Destination folder ID: the Active or Archived container, or the well-known `deleteditems` folder for Delete case and emails | `Mail.ReadWrite` |
 | Scan recent Inbox | `GET /me/mailFolders/inbox/messages` | `id,subject` only; newest first; maximum 250 | `Mail.ReadWrite` |
 | Move message | `POST /me/messages/{id}/move` | Destination folder ID | `Mail.ReadWrite` |
 | List/create rules | `GET/POST /me/mailFolders/inbox/messageRules` | Summary fields when listing; managed rule definition when creating | `MailboxSettings.ReadWrite` |
@@ -217,6 +217,7 @@ internal policy mandate requiring Exchange RBAC.
 | TM-16 | Elevation of privilege | Stolen token is used for mailbox APIs OLHelper never calls | Broader mailbox access than product behavior | Short-lived delegated token, CA/session controls, memory-only cache, bounded authenticated-document lifetime, incident revocation | OAuth scope is still `Mail.ReadWrite`; client allowlist does not bind a stolen token |
 | TM-17 | Elevation of privilege | App-only credentials are introduced into browser code | Tenant-scale mailbox access | Architecture prohibits secrets, certificates, managed identity tokens, app permissions, and `/users` endpoints in the frontend | Future architecture changes require a new threat review |
 | TM-18 | Integrity/availability | Multi-step Graph operation fails midway, the host terminates the runtime, or rollback fails | Folder/rule/message state diverges | Safe sequencing; session-end control disabled during active operations; limited rollback; precise partial-success reporting; status and Repair | Graph has no cross-resource transaction; Outlook or endpoint termination remains possible; rollback is not guaranteed |
+| TM-19 | Tampering | A user deletes the wrong case, or case mail is lost, through Delete case and emails | Case folder and its emails are removed from the Active tree | Delete is a move to the well-known Deleted Items folder, never a permanent delete: the client allowlist rejects folder `DELETE` and `permanentDelete`. It offers only for an Active case folder identified by a status check, requires the same item-bound confirmation as other mutations, disables routing before the move and removes the managed rule after it, and re-enables routing if the move fails. Only the case folder is moved; Inbox, Sent Items, and other folders are untouched | Deleted Items can be emptied by the user or retention policy, after which recovery depends on Exchange Recoverable Items retention |
 
 ## Priority abuse cases
 

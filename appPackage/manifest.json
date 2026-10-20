@@ -127,6 +127,24 @@
           ]
         },
         {
+          "id": "deleteRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/taskpane.html?action=delete"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "deleteCase",
+              "type": "openPage",
+              "displayName": "Delete case and emails",
+              "pinnable": false,
+              "multiselect": false,
+              "supportsNoItemContext": false
+            }
+          ]
+        },
+        {
           "id": "reopenRuntime",
           "type": "general",
           "code": {
@@ -280,6 +298,16 @@
                             "description": "Stop routing and archive the case after confirmation."
                           },
                           "actionId": "archiveCase"
+                        },
+                        {
+                          "id": "OlHelper.Delete",
+                          "type": "menuItem",
+                          "label": "Delete case and emails",
+                          "supertip": {
+                            "title": "Delete case and emails",
+                            "description": "Stop routing and move the case folder and its emails to Deleted Items after confirmation."
+                          },
+                          "actionId": "deleteCase"
                         },
                         {
                           "id": "OlHelper.Reopen",

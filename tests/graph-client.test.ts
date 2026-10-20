@@ -36,6 +36,23 @@ test("allows Graph pagination URLs", () => {
   );
 });
 
+test("allows moving a case folder to the well-known Deleted Items folder", () => {
+  assert.doesNotThrow(() =>
+    buildGraphUrl("/me/mailFolders/folder-1/move", {
+      method: "POST",
+      body: JSON.stringify({ destinationId: "deleteditems" }),
+    }),
+  );
+  assert.throws(() =>
+    buildGraphUrl("/me/mailFolders/folder-1/permanentDelete", {
+      method: "POST",
+    }),
+  );
+  assert.throws(() =>
+    buildGraphUrl("/me/mailFolders/folder-1", { method: "DELETE" }),
+  );
+});
+
 test("rejects URLs outside the Graph v1 boundary", () => {
   assert.throws(() => buildGraphUrl("https://example.com/steal"));
   assert.throws(() => buildGraphUrl("https://graph.microsoft.com/beta/me"));

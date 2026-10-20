@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   archiveCase,
+  deleteCase,
   getCaseStatus,
   reopenCase,
   repairCaseRouting,
@@ -18,6 +19,7 @@ import type { MessageRule } from "../src/graph/rules";
 function createOperations(
   state: CaseFolderState,
   existingRule: MessageRule | null = null,
+  failures: { moveFolder?: Error; deleteFolder?: Error } = {},
 ): CaseMailboxOperations & { calls: string[] } {
   const calls: string[] = [];
   const folder = state.folder ?? {
@@ -47,7 +49,19 @@ function createOperations(
       destination: Exclude<CaseLocation, "untracked">,
     ) {
       calls.push(`move-folder:${destination}`);
+
+      if (failures.moveFolder) {
+        throw failures.moveFolder;
+      }
+
       return { ...folder, id: `${destination}-folder` };
+    },
+    async deleteFolder() {
+      calls.push("delete-folder");
+
+      if (failures.deleteFolder) {
+        throw failures.deleteFolder;
+      }
     },
     async moveMessage(messageId) {
       calls.push(`move-message:${messageId}`);
@@ -264,6 +278,130 @@ test("archives an active case after disabling its rule", async () => {
     "move-folder:archived",
     "delete-rule",
   ]);
+});
+
+test("re-enables routing when archiving the case folder fails", async () => {
+  const existingRule: MessageRule = {
+    id: "rule-1",
+    displayName: "OLHelper | TrackingID#CASE-1",
+    sequence: 1,
+    isEnabled: true,
+    actions: { moveToFolder: "active-folder" },
+  };
+  const operations = createOperations(
+    {
+      location: "active",
+      folder: { id: "active-folder", displayName: "CASE-1" },
+    },
+    existingRule,
+    { moveFolder: new Error("Folder could not be moved.") },
+  );
+
+  await assert.rejects(
+    archiveCase("CASE-1", operations),
+    /Folder could not be moved/,
+  );
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "find-rule",
+    "set-rule:false",
+    "move-folder:archived",
+    "set-rule:true",
+  ]);
+});
+
+test("deletes an active case folder after disabling its rule, then removes the rule", async () => {
+  const existingRule: MessageRule = {
+    id: "rule-1",
+    displayName: "OLHelper | TrackingID#CASE-1",
+    sequence: 1,
+    isEnabled: true,
+    actions: { moveToFolder: "active-folder" },
+  };
+  const operations = createOperations(
+    {
+      location: "active",
+      folder: { id: "active-folder", displayName: "CASE-1 renamed" },
+    },
+    existingRule,
+  );
+
+  const result = await deleteCase("CASE-1", operations);
+
+  assert.deepEqual(result, {
+    trackingId: "CASE-1",
+    folderName: "CASE-1 renamed",
+  });
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "find-rule",
+    "set-rule:false",
+    "delete-folder",
+    "delete-rule",
+  ]);
+});
+
+test("deletes the folder of an active case whose rule is already missing", async () => {
+  const operations = createOperations({
+    location: "active",
+    folder: { id: "active-folder", displayName: "CASE-1" },
+  });
+
+  await deleteCase("CASE-1", operations);
+
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "find-rule",
+    "delete-folder",
+  ]);
+});
+
+test("re-enables routing when deleting the case folder fails", async () => {
+  const existingRule: MessageRule = {
+    id: "rule-1",
+    displayName: "OLHelper | TrackingID#CASE-1",
+    sequence: 1,
+    isEnabled: true,
+    actions: { moveToFolder: "active-folder" },
+  };
+  const operations = createOperations(
+    {
+      location: "active",
+      folder: { id: "active-folder", displayName: "CASE-1" },
+    },
+    existingRule,
+    { deleteFolder: new Error("Folder could not be moved.") },
+  );
+
+  await assert.rejects(
+    deleteCase("CASE-1", operations),
+    /Folder could not be moved/,
+  );
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "find-rule",
+    "set-rule:false",
+    "delete-folder",
+    "set-rule:true",
+  ]);
+});
+
+test("does not delete a case that is untracked or archived", async () => {
+  for (const state of [
+    { location: "untracked", folder: null },
+    {
+      location: "archived",
+      folder: { id: "archived-folder", displayName: "CASE-1" },
+    },
+  ] as const) {
+    const operations = createOperations(state);
+
+    await assert.rejects(
+      deleteCase("CASE-1", operations),
+      /is not active/,
+    );
+    assert.deepEqual(operations.calls, ["get-state"]);
+  }
 });
 
 test("reopens an archived case and recreates routing", async () => {

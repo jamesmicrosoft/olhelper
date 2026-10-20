@@ -1,6 +1,11 @@
 import type { CaseStatus } from "./case-workflows";
 
-export type CaseAction = "track" | "archive" | "reopen" | "repair";
+export type CaseAction =
+  | "track"
+  | "archive"
+  | "delete"
+  | "reopen"
+  | "repair";
 
 export function describeCaseStatus(
   trackingId: string,
@@ -35,6 +40,6 @@ export function getAvailableCaseActions(
   }
 
   return state.routing === "enabled"
-    ? ["archive"]
-    : ["archive", "repair"];
+    ? ["archive", "delete"]
+    : ["archive", "delete", "repair"];
 }

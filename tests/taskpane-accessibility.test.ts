@@ -113,6 +113,7 @@ test("keeps mailbox actions disabled until Office initialization completes", () 
     "check-status",
     "track-case",
     "archive-case",
+    "delete-case",
     "reopen-case",
     "repair-case",
     "end-session",
@@ -133,6 +134,12 @@ test("requires checked case state before enabling Track", () => {
   assert.match(script, /getButton\("track-case"\)\.hidden = location !== "untracked"/);
   assert.match(script, /restoreActionAvailability\(\)/);
   assert.match(script, /clearCaseStatus\("Case status could not be determined\."\)/);
+});
+
+test("requires a described confirmation before deleting a case", () => {
+  assert.match(script, /delete: \{\s*confirmation:/);
+  assert.match(script, /move the case folder and every email in it to Deleted Items/);
+  assert.match(script, /await deleteCase\(trackingId\)/);
 });
 
 test("does not display raw token or broker telemetry errors", () => {

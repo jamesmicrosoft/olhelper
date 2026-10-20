@@ -1,4 +1,5 @@
 import {
+  deleteCaseFolder,
   ensureActiveCaseFolder,
   getCaseFolderState,
   moveCaseFolder,
@@ -27,6 +28,8 @@ export interface CaseMailboxOperations {
     folderId: string,
     destination: Exclude<CaseLocation, "untracked">,
   ): Promise<MailFolder>;
+  // Moves the folder, and every message in it, to Deleted Items.
+  deleteFolder(folder: MailFolder): Promise<void>;
   moveMessage(messageId: string, folderId: string): Promise<{ id: string }>;
   findInboxMessages(
     trackingId: string,
@@ -64,6 +67,11 @@ export interface CaseActionResult {
   folderId: string;
 }
 
+export interface DeleteCaseResult {
+  trackingId: string;
+  folderName: string;
+}
+
 export interface CaseStatus {
   location: CaseLocation;
   routing:
@@ -78,6 +86,7 @@ export const graphCaseMailboxOperations: CaseMailboxOperations = {
   ensureActiveFolder: ensureActiveCaseFolder,
   getFolderState: getCaseFolderState,
   moveFolder: moveCaseFolder,
+  deleteFolder: deleteCaseFolder,
   moveMessage,
   ensureRule: ensureCaseRule,
   findRule: findCaseRule,
@@ -177,16 +186,22 @@ export async function trackCase(
   };
 }
 
-export async function archiveCase(
+// Archive and delete both retire an active case. Routing is stopped before the
+// folder moves so no new mail lands in it mid-move, and the managed rule is
+// removed afterwards so it can never route mail into the folder's new location.
+async function retireActiveCase<T>(
   trackingId: string,
-  operations: CaseMailboxOperations = graphCaseMailboxOperations,
-): Promise<CaseActionResult> {
+  operations: CaseMailboxOperations,
+  moveFolder: (folder: MailFolder) => Promise<T>,
+  verb: { gerund: string; past: string },
+): Promise<{ folder: MailFolder; moved: T }> {
   const state = await operations.getFolderState(trackingId);
 
   if (state.location !== "active" || !state.folder) {
     throw new Error(`Case ${trackingId} is not active.`);
   }
 
+  const folder = state.folder;
   const rule = await operations.findRule(trackingId);
   const wasEnabled = rule?.isEnabled ?? false;
 
@@ -194,10 +209,10 @@ export async function archiveCase(
     await operations.setRuleEnabled(rule.id, false);
   }
 
-  let folder: MailFolder;
+  let moved: T;
 
   try {
-    folder = await operations.moveFolder(state.folder.id, "archived");
+    moved = await moveFolder(folder);
   } catch (error) {
     if (rule && wasEnabled) {
       try {
@@ -205,7 +220,7 @@ export async function archiveCase(
       } catch (rollbackError) {
         throw new AggregateError(
           [error, rollbackError],
-          `Archiving ${trackingId} failed and its routing rule could not be re-enabled. Use Repair routing.`,
+          `${verb.gerund} ${trackingId} failed and its routing rule could not be re-enabled. Use Repair routing.`,
         );
       }
     }
@@ -218,16 +233,50 @@ export async function archiveCase(
       await operations.deleteRule(rule.id);
     } catch (error) {
       throw new Error(
-        `Case ${trackingId} was archived, but its disabled OLHelper rule could not be removed.`,
+        `Case ${trackingId} was ${verb.past}, but its disabled OLHelper rule could not be removed.`,
         { cause: error },
       );
     }
   }
 
+  return { folder, moved };
+}
+
+export async function archiveCase(
+  trackingId: string,
+  operations: CaseMailboxOperations = graphCaseMailboxOperations,
+): Promise<CaseActionResult> {
+  const { moved } = await retireActiveCase(
+    trackingId,
+    operations,
+    (folder) => operations.moveFolder(folder.id, "archived"),
+    { gerund: "Archiving", past: "archived" },
+  );
+
   return {
     trackingId,
     location: "archived",
-    folderId: folder.id,
+    folderId: moved.id,
+  };
+}
+
+// Deletes an active case instead of archiving it: the case folder and every
+// message in it move to Deleted Items (recoverable) and the managed rule is
+// removed. Mail in the Inbox, Sent Items, or any other folder is left alone.
+export async function deleteCase(
+  trackingId: string,
+  operations: CaseMailboxOperations = graphCaseMailboxOperations,
+): Promise<DeleteCaseResult> {
+  const { folder } = await retireActiveCase(
+    trackingId,
+    operations,
+    (activeFolder) => operations.deleteFolder(activeFolder),
+    { gerund: "Deleting", past: "moved to Deleted Items" },
+  );
+
+  return {
+    trackingId,
+    folderName: folder.displayName,
   };
 }
 

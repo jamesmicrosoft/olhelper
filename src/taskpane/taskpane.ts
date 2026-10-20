@@ -1,6 +1,7 @@
 import "./taskpane.css";
 import {
   archiveCase,
+  deleteCase,
   getCaseStatus,
   reopenCase,
   repairCaseRouting,
@@ -152,6 +153,22 @@ Office.onReady(async (info) => {
         );
         showActionsForState({
           location: "archived",
+          routing: "not-applicable",
+        });
+      },
+    },
+    delete: {
+      confirmation: `Delete ${trackingId} and all of its emails in ${mailbox}?`,
+      details:
+        "OLHelper will stop persistent routing, remove its managed Inbox rule, and move the case folder and every email in it to Deleted Items. The case will not be archived. You can restore the folder from Deleted Items until it is emptied.",
+      progress: "Stopping routing and deleting the case folder...",
+      run: async () => {
+        await deleteCase(trackingId);
+        setStatus(
+          `Case ${trackingId} was deleted. Its folder and emails are in Deleted Items, and routing was removed.`,
+        );
+        showActionsForState({
+          location: "untracked",
           routing: "not-applicable",
         });
       },
@@ -348,6 +365,7 @@ function showActionsForState(
 
   getButton("track-case").hidden = location !== "untracked";
   getButton("archive-case").hidden = location !== "active";
+  getButton("delete-case").hidden = location !== "active";
   getButton("repair-case").hidden =
     location !== "active" || routing === "enabled";
   getButton("reopen-case").hidden = location !== "archived";
@@ -358,6 +376,7 @@ function clearCaseStatus(message = "Case status has not been checked."): void {
   document.getElementById("case-state")!.textContent = message;
   getButton("track-case").hidden = false;
   getButton("archive-case").hidden = true;
+  getButton("delete-case").hidden = true;
   getButton("repair-case").hidden = true;
   getButton("reopen-case").hidden = true;
 }
@@ -381,6 +400,7 @@ function setActionButtonsDisabled(disabled: boolean): void {
     "check-status",
     "track-case",
     "archive-case",
+    "delete-case",
     "reopen-case",
     "repair-case",
   ]) {
@@ -403,7 +423,13 @@ function restoreActionAvailability(): void {
   );
   getButton("check-status").disabled = false;
 
-  for (const action of ["track", "archive", "reopen", "repair"] as const) {
+  for (const action of [
+    "track",
+    "archive",
+    "delete",
+    "reopen",
+    "repair",
+  ] as const) {
     getButton(`${action}-case`).disabled = !availableActions.has(action);
   }
 }
@@ -486,6 +512,7 @@ function getRequestedAction(): CaseAction | null {
 
   return action === "track" ||
     action === "archive" ||
+    action === "delete" ||
     action === "reopen" ||
     action === "repair"
     ? action

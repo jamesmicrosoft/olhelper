@@ -1,4 +1,4 @@
-import { graphRequest } from "./client";
+import { GraphError, graphRequest } from "./client";
 
 export interface MailFolder {
   id: string;
@@ -211,4 +211,30 @@ export async function moveCaseFolder(
       }),
     },
   );
+}
+
+// Moves the case folder, with every message in it, to Deleted Items. This is a
+// move rather than a permanent delete, so the user can still recover the folder
+// until Deleted Items is emptied.
+export async function deleteCaseFolder(folder: MailFolder): Promise<void> {
+  try {
+    await graphRequest<MailFolder>(
+      `/me/mailFolders/${encodeURIComponent(folder.id)}/move`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          destinationId: "deleteditems",
+        }),
+      },
+    );
+  } catch (error) {
+    if (error instanceof GraphError && error.status === 409) {
+      throw new Error(
+        `Deleted Items already contains a folder named "${folder.displayName}". Empty or rename it, then try again.`,
+        { cause: error },
+      );
+    }
+
+    throw error;
+  }
 }

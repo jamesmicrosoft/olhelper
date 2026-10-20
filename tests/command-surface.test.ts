@@ -64,7 +64,7 @@ test("exposes a direct status command and task-pane case action menu", () => {
   assert.equal(menu?.type, "menu");
   assert.deepEqual(
     menu?.items?.map(({ actionId }) => actionId),
-    ["trackCase", "archiveCase", "reopenCase", "repairRouting"],
+    ["trackCase", "archiveCase", "deleteCase", "reopenCase", "repairRouting"],
   );
 
   assert.deepEqual(
@@ -74,6 +74,7 @@ test("exposes a direct status command and task-pane case action menu", () => {
     [
       "https://localhost:3000/taskpane.html?action=track",
       "https://localhost:3000/taskpane.html?action=archive",
+      "https://localhost:3000/taskpane.html?action=delete",
       "https://localhost:3000/taskpane.html?action=reopen",
       "https://localhost:3000/taskpane.html?action=repair",
     ],
@@ -93,6 +94,7 @@ test("pins only the generic task pane entry point", () => {
       { id: "openOlHelper", pinnable: true },
       { id: "trackCase", pinnable: false },
       { id: "archiveCase", pinnable: false },
+      { id: "deleteCase", pinnable: false },
       { id: "reopenCase", pinnable: false },
       { id: "repairRouting", pinnable: false },
     ],
@@ -126,7 +128,7 @@ test("completes the function command and reports status through Outlook", () => 
 test("task-pane action links only accept known lifecycle actions", () => {
   assert.match(taskpane, /new URLSearchParams\(window\.location\.search\)/);
 
-  for (const action of ["track", "archive", "reopen", "repair"]) {
+  for (const action of ["track", "archive", "delete", "reopen", "repair"]) {
     assert.match(taskpane, new RegExp(`action === "${action}"`));
   }
 });

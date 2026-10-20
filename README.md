@@ -11,6 +11,11 @@ messages. The pilot supports a complete case lifecycle:
   requires routing repair.
 - **Archive** disables routing, moves the case folder to `Archived`, and removes
   the OLHelper-managed rule.
+- **Delete case and emails** (active cases only) disables routing, moves the case
+  folder and every email in it to Deleted Items instead of archiving, and removes
+  the OLHelper-managed rule. It is a move, not a permanent delete, so the folder
+  can be restored from Deleted Items until that folder is emptied. Mail in the
+  Inbox, Sent Items, or any other folder is not touched.
 - **Reopen** moves an archived case back to `Active` and restores routing.
 - **Repair routing** recreates or enables the managed rule for an active case.
 
