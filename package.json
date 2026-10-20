@@ -9,7 +9,7 @@
     "start": "office-addin-debugging start manifest.xml",
     "stop": "office-addin-debugging stop manifest.xml",
     "test": "tsx --test tests/**/*.test.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
     "validate": "office-addin-manifest validate manifest.xml",
     "manifest:hosted": "node scripts/create-hosted-manifest.mjs",
     "security:audit": "npm audit --omit=dev --audit-level=high",

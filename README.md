@@ -6,10 +6,15 @@ messages. The pilot supports a complete case lifecycle:
 
 - **Track** creates or reuses an active case folder, moves the selected message,
   and enables persistent routing.
-- **Check status** reports whether the case is active, archived, untracked, or
-  requires routing repair.
+- **Check status** runs automatically when the task pane opens and reports whether
+  the case is active, archived, untracked, or requires routing repair. Only the
+  actions that apply to that state are shown. **Refresh status** re-runs the check.
 - **Archive** disables routing, moves the case folder to `Archived`, and removes
   the OLHelper-managed rule.
+- **Delete case and emails** (active cases only) disables routing, moves the case
+  folder and every email in it to Deleted Items instead of archiving, and removes
+  the OLHelper-managed rule. It asks for confirmation first and leaves mail in
+  the Inbox and Sent Items alone.
 - **Reopen** moves an archived case back to `Active` and restores routing.
 - **Repair routing** recreates or enables the managed rule for an active case.
 

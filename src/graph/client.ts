@@ -68,3 +68,32 @@ export function buildGraphUrl(pathOrUrl: string): string {
 
   return url.toString();
 }
+
+const transientStatuses = new Set([429, 503, 504]);
+const maximumRetryDelayMs = 5000;
+
+function isTransientGraphError(error: unknown): boolean {
+  return error instanceof GraphError && transientStatuses.has(error.status);
+}
+
+// Retry a Graph call a bounded number of times when Graph reports throttling or
+// a transient outage. Mailbox-wide scans and bulk moves issue many sequential
+// requests and are the operations most likely to be throttled; a single 429
+// must not be allowed to abort them.
+export async function withGraphRetry<T>(
+  operation: () => Promise<T>,
+  maximumRetries = 3,
+): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= maximumRetries || !isTransientGraphError(error)) {
+        throw error;
+      }
+
+      const backoffMs = Math.min(2 ** attempt * 250, maximumRetryDelayMs);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { graphRequest } from "./client";
+import { GraphError, graphRequest } from "./client";
 
 export interface MailFolder {
   id: string;
@@ -207,4 +207,44 @@ export async function moveCaseFolder(
       }),
     },
   );
+}
+
+export function isFolderNameConflict(error: unknown): boolean {
+  return (
+    error instanceof GraphError &&
+    (error.status === 409 || error.responseBody.includes("ErrorFolderExists"))
+  );
+}
+
+// Moves the case folder, with all of its messages, to Deleted Items. This is a
+// move rather than a permanent delete, so the user can still recover it.
+export async function deleteCaseFolder(folder: MailFolder): Promise<void> {
+  const folderPath = `/me/mailFolders/${encodeURIComponent(folder.id)}`;
+  const moveToDeletedItems = () =>
+    graphRequest<MailFolder>(`${folderPath}/move`, {
+      method: "POST",
+      body: JSON.stringify({ destinationId: "deleteditems" }),
+    });
+
+  try {
+    await moveToDeletedItems();
+  } catch (error) {
+    if (!isFolderNameConflict(error)) {
+      throw error;
+    }
+
+    // Deleted Items already holds a folder with this name, for example from an
+    // earlier delete of the same case. Rename ours so the move can succeed. The
+    // new name still starts with the tracking ID, so it keeps matching as a case
+    // folder if the retry fails.
+    const stamp = new Date().toISOString().slice(0, 16).replace("T", " ").replace(":", "-");
+
+    await graphRequest<MailFolder>(folderPath, {
+      method: "PATCH",
+      body: JSON.stringify({
+        displayName: `${folder.displayName} (deleted ${stamp})`,
+      }),
+    });
+    await moveToDeletedItems();
+  }
 }

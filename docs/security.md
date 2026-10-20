@@ -40,7 +40,7 @@ metadata, and user-agent information. They must not contain mailbox data.
 | A compromised deployment serves mailbox-reading JavaScript | Protected pilot environment, reviewed changes, CodeQL, dependency review, CSP, immutable build output, an environment-controlled exact host origin, and rapid deployment-token rotation |
 | A malicious pagination URL receives an access token | Graph client permits only relative Graph paths and absolute `https://graph.microsoft.com/v1.0/` URLs |
 | A malformed Tracking ID creates unsafe folders or rules | Allow-listed characters, 64-character limit, URL encoding, and negative tests |
-| A user triggers unexpected mailbox changes | Every Track, Archive, Reopen, and Repair action requires an in-pane confirmation that identifies the mailbox and describes the mutations |
+| A user triggers unexpected mailbox changes | Every Reopen, Repair, and Delete action requires an in-pane confirmation that identifies the mailbox and describes the mutations. Track and Archive run on a single click of a button that names the case, and only appear when the checked case state allows them. Delete moves the folder to Deleted Items rather than permanently deleting it |
 | A token remains available after the task pane closes | MSAL cache uses `sessionStorage`; tokens are never copied to application storage or telemetry |
 | A registration or manifest redirects authentication elsewhere | Single-tenant authority, exact NAA broker origin, controlled manifest, and restricted registration ownership |
 | An unapproved site embeds the task pane | CSP `frame-ancestors` permits only the supported Outlook and Office host origins, including `outlook.cloud.microsoft` for new Outlook |
@@ -81,7 +81,7 @@ Before using OLHelper with anything other than synthetic sandbox mail:
   selected message is moved, reports exact partial-success states, and provides
   Repair routing. A failed operation can still leave a reusable folder or a
   disabled rule.
-- The pilot now covers Track, status, Archive, Reopen, and Repair routing.
+- The pilot now covers Track, status, Archive, Delete, Reopen, and Repair routing.
   Automated quota handling and duplicate/conflicting-folder remediation remain
   outside the pilot.
 - Exchange `subjectContains` matching is not boundary-aware. Tracking IDs with
